@@ -102,4 +102,4 @@ L'application inclut un composant `DataInitializer` qui peuple automatiquement l
 Cette application backend est conçue pour fonctionner avec un frontend Angular 15. Le frontend communique avec le backend via les API REST exposées.
 
 ## Licence
-Ce projet est développé pour le COUD (Centre des Œuvres Universitaires de Dakar).
+Ce projet est développé par Abdou Aziz NDIAYE ingénieur génie logiciel et consultant IT au niveau du COUD (Centre des Œuvres Universitaires de Dakar).
