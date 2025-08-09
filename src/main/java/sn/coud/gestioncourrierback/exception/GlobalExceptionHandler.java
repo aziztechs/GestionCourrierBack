@@ -4,12 +4,16 @@ import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.NoHandlerFoundException;
+import sn.coud.gestioncourrierback.dto.ApiResponse;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -22,6 +26,39 @@ import java.util.Map;
 public class GlobalExceptionHandler {
 
     /**
+     * Handle AuthenticationException (Bad credentials, etc.).
+     */
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ApiResponse<Object>> handleAuthenticationException(
+            AuthenticationException ex, WebRequest request) {
+        
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ApiResponse.error("Erreur d'authentification : " + ex.getMessage()));
+    }
+
+    /**
+     * Handle BadCredentialsException.
+     */
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<ApiResponse<Object>> handleBadCredentialsException(
+            BadCredentialsException ex, WebRequest request) {
+        
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ApiResponse.error("Nom d'utilisateur ou mot de passe incorrect"));
+    }
+
+    /**
+     * Handle AccessDeniedException.
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiResponse<Object>> handleAccessDeniedException(
+            AccessDeniedException ex, WebRequest request) {
+        
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(ApiResponse.error("Accès refusé : " + ex.getMessage()));
+    }
+
+    /**
      * Handle EntityNotFoundException.
      * 
      * @param ex the exception
@@ -29,17 +66,11 @@ public class GlobalExceptionHandler {
      * @return the error response
      */
     @ExceptionHandler(EntityNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleEntityNotFoundException(
+    public ResponseEntity<ApiResponse<Object>> handleEntityNotFoundException(
             EntityNotFoundException ex, WebRequest request) {
 
-        ErrorResponse errorResponse = new ErrorResponse(
-                HttpStatus.NOT_FOUND.value(),
-                ex.getMessage(),
-                request.getDescription(false),
-                LocalDateTime.now()
-        );
-
-        return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.error("Ressource non trouvée : " + ex.getMessage()));
     }
 
     /**
@@ -50,17 +81,11 @@ public class GlobalExceptionHandler {
      * @return the error response
      */
     @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<ErrorResponse> handleIllegalArgumentException(
+    public ResponseEntity<ApiResponse<Object>> handleIllegalArgumentException(
             IllegalArgumentException ex, WebRequest request) {
 
-        ErrorResponse errorResponse = new ErrorResponse(
-                HttpStatus.BAD_REQUEST.value(),
-                ex.getMessage(),
-                request.getDescription(false),
-                LocalDateTime.now()
-        );
-
-        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error("Erreur de validation : " + ex.getMessage()));
     }
 
     /**
@@ -71,7 +96,7 @@ public class GlobalExceptionHandler {
      * @return the error response
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ValidationErrorResponse> handleMethodArgumentNotValidException(
+    public ResponseEntity<ApiResponse<Map<String, String>>> handleMethodArgumentNotValidException(
             MethodArgumentNotValidException ex, WebRequest request) {
 
         Map<String, String> errors = new HashMap<>();
@@ -81,15 +106,8 @@ public class GlobalExceptionHandler {
             errors.put(fieldName, errorMessage);
         });
 
-        ValidationErrorResponse errorResponse = new ValidationErrorResponse(
-                HttpStatus.BAD_REQUEST.value(),
-                "Validation error",
-                request.getDescription(false),
-                LocalDateTime.now(),
-                errors
-        );
-
-        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error("Erreurs de validation", errors));
     }
 
     /**
@@ -100,7 +118,7 @@ public class GlobalExceptionHandler {
      * @return the error response
      */
     @ExceptionHandler(ConstraintViolationException.class)
-    public ResponseEntity<ValidationErrorResponse> handleConstraintViolationException(
+    public ResponseEntity<ApiResponse<Map<String, String>>> handleConstraintViolationException(
             ConstraintViolationException ex, WebRequest request) {
 
         Map<String, String> errors = new HashMap<>();
@@ -110,15 +128,8 @@ public class GlobalExceptionHandler {
             errors.put(fieldName, errorMessage);
         });
 
-        ValidationErrorResponse errorResponse = new ValidationErrorResponse(
-                HttpStatus.BAD_REQUEST.value(),
-                "Validation error",
-                request.getDescription(false),
-                LocalDateTime.now(),
-                errors
-        );
-
-        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error("Erreurs de contraintes", errors));
     }
 
     /**
@@ -129,17 +140,11 @@ public class GlobalExceptionHandler {
      * @return the error response
      */
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponse> handleGlobalException(
+    public ResponseEntity<ApiResponse<Object>> handleGlobalException(
             Exception ex, WebRequest request) {
 
-        ErrorResponse errorResponse = new ErrorResponse(
-                HttpStatus.INTERNAL_SERVER_ERROR.value(),
-                ex.getMessage(),
-                request.getDescription(false),
-                LocalDateTime.now()
-        );
-
-        return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiResponse.error("Erreur interne du serveur : " + ex.getMessage()));
     }
 
     /**
