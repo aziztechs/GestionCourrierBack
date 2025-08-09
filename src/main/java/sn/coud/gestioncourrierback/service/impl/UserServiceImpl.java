@@ -2,8 +2,10 @@ package sn.coud.gestioncourrierback.service.impl;
 
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 import sn.coud.gestioncourrierback.dto.UserDTO;
 import sn.coud.gestioncourrierback.model.User;
 import sn.coud.gestioncourrierback.repository.UserRepository;
@@ -21,6 +23,7 @@ import java.util.stream.Collectors;
 public class UserServiceImpl implements UserService {
     
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
     
     /**
      * Convert a User entity to a UserDTO.
@@ -59,9 +62,9 @@ public class UserServiceImpl implements UserService {
         user.setActive(userDTO.isActive());
         user.setRoleFonction(userDTO.getRoleFonction());
         user.setEmail(userDTO.getEmail());
-        // Only set password if it's not null or empty
-        if (userDTO.getPassword() != null && !userDTO.getPassword().isEmpty()) {
-            user.setPassword(userDTO.getPassword()); // In a real app, you would hash the password here
+        // Only set password if it's not null or empty, and hash it
+        if (StringUtils.hasText(userDTO.getPassword())) {
+            user.setPassword(passwordEncoder.encode(userDTO.getPassword()));
         }
         user.setTelephone(userDTO.getTelephone());
         return user;
@@ -112,9 +115,9 @@ public class UserServiceImpl implements UserService {
         existingUser.setActive(userDTO.isActive());
         existingUser.setRoleFonction(userDTO.getRoleFonction());
         existingUser.setEmail(userDTO.getEmail());
-        // Only update password if it's not null or empty
-        if (userDTO.getPassword() != null && !userDTO.getPassword().isEmpty()) {
-            existingUser.setPassword(userDTO.getPassword()); // In a real app, you would hash the password here
+        // Only update password if it's not null or empty, and hash it
+        if (StringUtils.hasText(userDTO.getPassword())) {
+            existingUser.setPassword(passwordEncoder.encode(userDTO.getPassword()));
         }
         existingUser.setTelephone(userDTO.getTelephone());
         
