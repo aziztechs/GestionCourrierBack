@@ -7,8 +7,12 @@ import org.springframework.transaction.annotation.Transactional;
 import sn.coud.gestioncourrierback.dto.SuiviDTO;
 import sn.coud.gestioncourrierback.model.Courrier;
 import sn.coud.gestioncourrierback.model.Suivi;
+import sn.coud.gestioncourrierback.model.User;
+import sn.coud.gestioncourrierback.model.StatutSuivi;
+import sn.coud.gestioncourrierback.model.PrioriteSuivi;
 import sn.coud.gestioncourrierback.repository.CourrierRepository;
 import sn.coud.gestioncourrierback.repository.SuiviRepository;
+import sn.coud.gestioncourrierback.repository.UserRepository;
 import sn.coud.gestioncourrierback.service.SuiviService;
 
 import java.time.LocalDate;
@@ -25,6 +29,7 @@ public class SuiviServiceImpl implements SuiviService {
     
     private final SuiviRepository suiviRepository;
     private final CourrierRepository courrierRepository;
+    private final UserRepository userRepository;
     
     /**
      * Convert a Suivi entity to a SuiviDTO.
@@ -36,9 +41,27 @@ public class SuiviServiceImpl implements SuiviService {
         SuiviDTO suiviDTO = new SuiviDTO();
         suiviDTO.setId(suivi.getId());
         suiviDTO.setCourrierId(suivi.getCourrier().getId());
+        
+        // Informations du responsable
+        if (suivi.getResponsable() != null) {
+            suiviDTO.setResponsableId(suivi.getResponsable().getId());
+            suiviDTO.setResponsableNom(suivi.getResponsable().getNom());
+            suiviDTO.setResponsablePrenom(suivi.getResponsable().getPrenom());
+        }
+        
         suiviDTO.setInstruction(suivi.getInstruction());
         suiviDTO.setDescription(suivi.getDescription());
         suiviDTO.setDate(suivi.getDate());
+        suiviDTO.setStatut(suivi.getStatut());
+        suiviDTO.setPriorite(suivi.getPriorite());
+        suiviDTO.setDateEcheance(suivi.getDateEcheance());
+        
+        // Champs d'audit
+        suiviDTO.setDateCreation(suivi.getDateCreation());
+        suiviDTO.setDateModification(suivi.getDateModification());
+        suiviDTO.setCreePar(suivi.getCreePar());
+        suiviDTO.setModifiePar(suivi.getModifiePar());
+        
         return suiviDTO;
     }
     
@@ -59,9 +82,20 @@ public class SuiviServiceImpl implements SuiviService {
             suivi.setCourrier(courrier);
         }
         
+        // Set responsable
+        if (suiviDTO.getResponsableId() != null) {
+            User responsable = userRepository.findById(suiviDTO.getResponsableId())
+                    .orElseThrow(() -> new EntityNotFoundException("User not found with id: " + suiviDTO.getResponsableId()));
+            suivi.setResponsable(responsable);
+        }
+        
         suivi.setInstruction(suiviDTO.getInstruction());
         suivi.setDescription(suiviDTO.getDescription());
         suivi.setDate(suiviDTO.getDate());
+        suivi.setStatut(suiviDTO.getStatut() != null ? suiviDTO.getStatut() : StatutSuivi.EN_COURS);
+        suivi.setPriorite(suiviDTO.getPriorite() != null ? suiviDTO.getPriorite() : PrioriteSuivi.NORMALE);
+        suivi.setDateEcheance(suiviDTO.getDateEcheance());
+        
         return suivi;
     }
     
@@ -98,10 +132,29 @@ public class SuiviServiceImpl implements SuiviService {
             existingSuivi.setCourrier(courrier);
         }
         
+        // Validate and update responsable if it's being changed
+        if (suiviDTO.getResponsableId() != null) {
+            if (existingSuivi.getResponsable() == null || 
+                !existingSuivi.getResponsable().getId().equals(suiviDTO.getResponsableId())) {
+                if (!userRepository.existsById(suiviDTO.getResponsableId())) {
+                    throw new EntityNotFoundException("User not found with id: " + suiviDTO.getResponsableId());
+                }
+                
+                User responsable = userRepository.findById(suiviDTO.getResponsableId())
+                        .orElseThrow(() -> new EntityNotFoundException("User not found with id: " + suiviDTO.getResponsableId()));
+                existingSuivi.setResponsable(responsable);
+            }
+        } else {
+            existingSuivi.setResponsable(null);
+        }
+        
         // Update suivi fields
         existingSuivi.setInstruction(suiviDTO.getInstruction());
         existingSuivi.setDescription(suiviDTO.getDescription());
         existingSuivi.setDate(suiviDTO.getDate());
+        existingSuivi.setStatut(suiviDTO.getStatut() != null ? suiviDTO.getStatut() : existingSuivi.getStatut());
+        existingSuivi.setPriorite(suiviDTO.getPriorite() != null ? suiviDTO.getPriorite() : existingSuivi.getPriorite());
+        existingSuivi.setDateEcheance(suiviDTO.getDateEcheance());
         
         existingSuivi = suiviRepository.save(existingSuivi);
         return convertToDTO(existingSuivi);
